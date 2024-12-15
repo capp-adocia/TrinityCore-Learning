@@ -1,0 +1,68 @@
+FAQ - 常见问题
+================================
+
+Q： 什么是 libmpq？
+A： libmpq 是一个用于操作 MoPaQ mpq 档案的库，主要使用
+   被暴雪在他们的游戏中使用。
+
+问：libmpq 有什么作用？
+答：使用 libmpq，您可以编写可以提取、创建
+   并操纵 MPQ 档案。
+
+Q： 合法吗？
+答：是的，我认为是的。我不知道为什么不应该，所有信息
+   关于文件格式可用。
+
+Q： 有功能说明吗？
+答：从 0.4.0 版本开始，libmpq 附带了 API 文档
+   开发 人员。文档以手册页的形式编写。
+
+问：我能帮忙吗？
+答：是的，不仅需要开发方面的帮助，还需要测试方面的帮助。
+   一个很好的起点是使用 libmpq 的最新 SVN 版本和
+   尝试将它与您可以获得的所有 MPQ 存档一起使用：）
+
+Q： 您能举一个小例子来演示用法吗？
+答：当然：）以下示例将第一个参数作为 mpq 存档
+并将第一个文件提取到缓冲区中。
+
+/*
+    * 编译方式：
+    *
+    * x86_32：
+    *
+    * GCC \
+    * -D_FILE_OFFSET_BITS=64 \
+    * -D_LARGE_FILES=1 \
+    * -D_LARGEFILE_SOURCE=1 \
+    * mpq-example.c -o mpq-example -lmpq -lz -lbz2 -I/usr/local/include/libmpq
+    *
+    * x86_64：
+    *
+    * GCC \
+    * -D_LARGE_FILES=1 \
+    * mpq-example.c -o mpq-example -lmpq -lz -lbz2 -I/usr/local/include/libmpq
+    */
+
+#include <mpq.h>
+   #include < stdlib.h>
+   #include < limits.h>
+
+int main（int argc， char **argv） {
+           mpq_archive_s *mpq_archive;
+            off_t out_size;
+           char *out_buf;
+
+/* 打开作为第一个参数给出的 mpq 存档。*/
+           libmpq__archive_open（&mpq_archive， argv[1]， -1）;
+
+/* 获取第一个文件的大小 （0） 和 malloc 输出缓冲区。*/
+           libmpq__file_size_unpacked（mpq_archive， 0， &out_size）;
+           out_buf = malloc（out_size）;
+
+/* 读取、解密和解压缩文件到输出缓冲区。*/
+           libmpq__file_read（mpq_archive， 0， out_buf， out_size， NULL）;
+
+/* 关闭 mpq 存档。*/
+           libmpq__archive_close（mpq_archive）;
+   }

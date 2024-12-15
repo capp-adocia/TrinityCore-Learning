@@ -1,0 +1,142 @@
+日志系统 "类似 log4j"
+--- 日志记录器和附加器 ---
+日志系统有两个组件：日志记录器和附加器。这些组件使用户可以根据消息类型和级别记录日志，并在运行时控制日志输出的目的地。
+日志记录器 (LOGGERS)
+该系统的首要优点是能够禁用某些日志语句，同时允许其他日志正常打印。这一能力要求日志记录器根据某些开发者选择的标准进行分类。
+日志记录器是命名实体，日志记录器名称是区分大小写的，并遵循层次化命名规则：
+
+1.如果一个日志记录器的名称后跟一个点并且是另一个日志记录器名称的前缀，那么前者是后者的祖先。
+2.如果两个日志记录器之间没有其他祖先，前者是后者的父日志记录器。
+
+例如，名为 "entities.player" 的日志记录器是名为 "entities.player.character" 的日志记录器的父记录器。同样，"entities" 是 "entities.player" 的父记录器，也是 "entities.player.character" 的祖先。
+日志记录器可以被分配日志级别。可用的级别有：TRACE、DEBUG、INFO、WARN、ERROR 和 FATAL，或者使用级别 DISABLED 来禁用日志记录器。
+通过定义，打印方法决定了日志请求的级别。例如，TC_LOG_INFO(...) 是一个 INFO 级别的日志请求。
+如果日志请求的级别大于或等于其日志记录器的级别，则该日志请求被认为是启用的。否则，该日志请求被认为是禁用的。一个未分配级别的日志记录器将继承其父层级的级别。
+示例
+Logger 名称           分配的级别         继承的级别
+root                 Proot             Proot
+server               None              Proot
+
+由于 "server" 未定义级别，它将使用根日志记录器并继承其日志级别。
+级别顺序：TRACE &lt; DEBUG &lt; INFO &lt; WARN &lt; ERROR &lt; FATAL。
+附加器 (APPENDERS)
+能够根据日志记录器启用或禁用日志请求仅仅是日志系统的一部分。该系统允许日志请求打印到多个目标位置。输出目标称为附加器。当前系统定义了控制台、文件和数据库的附加器，但可以轻松扩展到远程套接字服务器、NT 事件日志、syslog 守护进程或任何其他系统。
+一个日志记录器可以附加多个附加器。对于某一日志记录器的每个启用的日志请求，该请求将转发到该日志记录器的所有附加器。
+配置 (CONFIGURATION)
+系统会读取所有以 "Logger." 和 "Appender." 为前缀的配置元素并配置日志系统。如果无法正确配置 "root"，核心将移除所有日志记录器和附加器，并创建一组默认的配置：
+
+3.Logger "root" 级别为 Error
+4.Logger "server" 级别为 Info
+5.Appender "Console" 输出到控制台
+
+附加器配置行遵循以下格式：
+Type, LogLevel, Flags, optional1, optional2
+
+该行是由逗号分隔的元素，每个元素都有其特定含义：
+
+6.Type：附加器类型
+7.1 - (Console)
+8.2 - (File)
+9.3 - (DB)
+10.LogLevel：日志级别
+11.0 - (Disabled)
+12.1 - (Trace)
+13.2 - (Debug)
+14.3 - (Info)
+15.4 - (Warn)
+16.5 - (Error)
+17.6 - (Fatal)
+18.Flags：定义日志消息的附加修改
+19.1 - 在文本前加上时间戳
+20.2 - 在文本前加上日志级别
+21.4 - 在文本前加上日志过滤类型
+22.8 - 在日志文件名中附加时间戳，格式：YYYY-MM-DD_HH-MM-SS（仅对 Type = 2 使用）
+23.16 - 在覆盖文件之前备份现有文件（仅对 Mode = w 使用）
+
+根据附加器类型，optional1 和 optional2 具有不同的含义。
+颜色（当 Type = Console 时，optional1 表示颜色）
+格式："fatal error warn info debug trace"
+0 - BLACK
+1 - RED
+2 - GREEN
+3 - BROWN
+4 - BLUE
+5 - MAGENTA
+6 - CYAN
+7 - GREY
+8 - YELLOW
+9 - LRED
+10 - LGREEN
+11 - LBLUE
+12 - LMAGENTA
+13 - LCYAN
+14 - WHITE
+
+例如："13 11 9 5 3 1"
+文件（当 Type = File 时，optional1 表示文件名）
+允许使用一个 "%u" 来创建动态文件。
+模式（当 Type = File 时，optional2 表示打开文件的模式）
+
+24.a - (附加)
+25.w - (覆盖)
+
+示例配置：
+Appender.Console=1,2,6
+
+创建新的附加器，日志级别为 DEBUG 或更高级别的所有消息将输出到控制台，并且会加上日志类型和日志级别的前缀。
+Appender.Console2=1,5,1,13 11 9 5 3 1
+
+创建新的附加器，日志级别为 ERROR 或更高级别的所有消息将输出到控制台，并且会加上时间戳和使用彩色文本。
+Appender.File=2,2,7,Auth.log,w
+
+创建新的附加器，日志级别为 DEBUG 或更高级别的所有消息将输出到文件 "Auth.log" 中，并加上时间戳、日志类型和日志级别。
+配置示例
+示例 1
+将错误日志输出到控制台，并将日志写入一个名为 server.log 的文件，该文件仅包含此次服务器运行的日志。文件应加上时间戳、类型和日志级别的前缀。控制台应加上日志类型和级别的前缀。
+Appender.Console=1,5,6
+Appender.Server=2,5,7,Server.log,w
+Logger.root=5,Console Server
+
+日志追踪：
+
+26.TC_LOG_ERROR(LOG_FILTER_GUILD, "Guild 1 created");
+
+
+27.系统会尝试查找类型为 GUILD 的日志记录器，由于没有为 GUILD 配置日志记录器，它将使用根日志记录器。由于日志级别大于或等于日志记录器的级别，日志将被发送到配置在日志记录器中的附加器 "Console" 和 "Server"。
+28.控制台会输出：ERROR [GUILD] Guild 1 created
+29.服务器会写入文件 2012-08-15 ERROR [GUILD] Guild 1 created
+
+
+30.TC_LOG_INFO(LOG_FILTER_CHARACTER, "Player Name Logged in");
+
+
+31.系统会尝试查找类型为 CHARACTER 的日志记录器，由于没有为 CHARACTER 配置日志记录器，它将使用根日志记录器。由于日志级别低于根日志记录器的日志级别，因此此消息会被丢弃。
+
+示例 2
+与示例 1 相同，但现在希望将所有 INFO 级别的消息记录到文件中，且服务器日志文件创建时应附加时间戳。
+Appender.Console=1,5,6
+Appender.Server=2,4,15,Server.log
+Logger.root=4,Console Server
+
+日志追踪：
+
+32.TC_LOG_ERROR(LOG_FILTER_GUILD, "Guild 1 created");
+
+
+33.按照示例 1 执行。
+
+
+34.TC_LOG_INFO(LOG_FILTER_CHARACTER, "Player Name Logged in");
+
+
+35.系统会尝试查找类型为 CHARACTER 的日志记录器，由于没有为 CHARACTER 配置日志记录器，它将使用根日志记录器。由于日志级别大于或等于日志记录器的级别，日志将被发送到配置在日志记录器中的附加器 "Console" 和 "Server"。
+36.控制台会丢弃该消息，因为日志级别低于配置的日志级别。
+37.服务器会写入文件：2012-08-15 INFO [CHARACTER] Player Name Logged in
+
+示例 3
+作为开发人员，我可能只对日志记录系统的某一部分感兴趣。此时我希望将 GUILDS 的日志记录到 TRACE 级别，并且将 CHARACTER 的日志记录到 INFO 级别。另外，我还希望将 SQLDEV 日志记录到文件中，并且不使用任何前缀。其他所有消息只应记录到控制台。
+```
+Appender.Console=1,1
+Appender.SQLDev=2,2,0,SQLDev.log
+Logger.guild=1,Console
+Logger.entities.player.character
